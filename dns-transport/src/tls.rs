@@ -1,6 +1,6 @@
-#![cfg_attr(not(feature = "tls"), allow(unused))]
+#![cfg_attr(not(feature = "with_tls"), allow(unused))]
 
-use std::net::TcpStream;
+// use std::net::TcpStream;
 use std::io::Write;
 use std::time::Duration;
 
@@ -9,7 +9,7 @@ use log::*;
 use dns::{Request, Response};
 use super::{Transport, Error, TcpTransport};
 use super::tls_stream::TlsStream;
-use super::to_socket_addr;
+// use super::to_socket_addr;
 
 
 /// The **TLS transport**, which sends DNS wire data using TCP through an

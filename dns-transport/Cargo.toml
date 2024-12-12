@@ -24,13 +24,13 @@ native-tls = { version = "0.2", optional = true }
 httparse = { version = "1.3", optional = true }
 
 # DoH through reqwest
-reqwest = { version = "0.11.22", optional = true, features = ["blocking"] }
+reqwest = { version = "0.12.9", optional = true, features = ["blocking"] }
 
 # For http/https proxies
 http = "1.0"
 url = "2.2"
 
-rustls = { version = "0.22", optional = true }
+rustls = { version = "0.23", optional = true }
 
 webpki = { version = "0.22", optional = true }
 
