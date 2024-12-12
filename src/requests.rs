@@ -19,6 +19,8 @@ pub struct RequestGenerator {
     /// Whether to OPT in to DNS extensions.
     pub edns: UseEDNS,
 
+    pub csubnet: UseCSUBNET,
+
     /// Other weird protocol options.
     pub protocol_tweaks: ProtocolTweaks,
 }
@@ -76,6 +78,10 @@ pub enum UseEDNS {
     SendAndShow,
 }
 
+#[derive(PartialEq, Debug, Default, Copy, Clone)]
+pub struct UseCSUBNET {
+    pub client_subnet: Option<std::net::IpAddr>,
+}
 
 /// The entry type for `RequestGenerator`: a transport to send a request, and
 /// a list of one or more DNS queries to send over it, as determined by the
@@ -103,8 +109,14 @@ impl RequestGenerator {
                             self.protocol_tweaks.set_request_flags(&mut flags);
 
                             let mut additional = None;
-                            if self.edns.should_send() {
+                            if self.edns.should_send() || self.csubnet.should_send() {
                                 let mut opt = dns::Request::additional_record();
+
+                                if self.csubnet.should_send() {
+                                    let csubnet = dns::record::CSUBNET { address: self.csubnet.client_subnet.unwrap()};
+                                    opt.data = csubnet.to_bytes()?;
+                                }
+
                                 self.protocol_tweaks.set_request_opt_fields(&mut opt);
                                 additional = Some(opt);
                             }
@@ -140,6 +152,13 @@ impl UseEDNS {
     /// Whether the user wants to display sent OPT records.
     pub fn should_show(self) -> bool {
         self == Self::SendAndShow
+    }
+}
+
+impl UseCSUBNET {
+
+    pub fn should_send(self) -> bool {
+        self.client_subnet.is_some()
     }
 }
 

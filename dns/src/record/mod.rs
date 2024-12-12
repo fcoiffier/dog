@@ -67,6 +67,9 @@ pub use self::uri::URI;
 mod others;
 pub use self::others::UnknownQtype;
 
+mod csubnet;
+pub use self::csubnet::CSUBNET;
+
 
 /// A record that’s been parsed from a byte buffer.
 #[derive(PartialEq, Debug)]

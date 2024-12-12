@@ -3,6 +3,7 @@
 use std::ffi::OsStr;
 use std::fmt;
 use std::time::Duration;
+use std::net::IpAddr;
 
 use log::*;
 
@@ -11,7 +12,7 @@ use dns::record::RecordType;
 
 use crate::connect::TransportType;
 use crate::output::{OutputFormat, UseColours, TextFormat};
-use crate::requests::{RequestGenerator, Inputs, ProtocolTweaks, UseEDNS};
+use crate::requests::{RequestGenerator, Inputs, ProtocolTweaks, UseEDNS, UseCSUBNET};
 use crate::resolve::ResolverType;
 use crate::txid::TxidGenerator;
 
@@ -60,6 +61,7 @@ impl Options {
         opts.optopt  ("",  "txid",         "Set the transaction ID to a specific value", "NUMBER");
         opts.optmulti("Z", "",             "Set uncommon protocol tweaks", "TWEAKS");
         opts.optopt  ("",  "timeout",      "Time-out for the request", "NUMBER");
+        opts.optopt  ("",  "csubnet",      "Client SUBNET", "ADDR");
 
         // Protocol options
         opts.optflag ("U", "udp",          "Use the DNS protocol over UDP");
@@ -123,11 +125,12 @@ impl Options {
 impl RequestGenerator {
     fn deduce(matches: getopts::Matches) -> Result<Self, OptionsError> {
         let edns = UseEDNS::deduce(&matches)?;
+        let csubnet = UseCSUBNET::deduce(&matches)?;
         let txid_generator = TxidGenerator::deduce(&matches)?;
         let protocol_tweaks = ProtocolTweaks::deduce(&matches)?;
         let inputs = Inputs::deduce(matches)?;
 
-        Ok(Self { inputs, txid_generator, edns, protocol_tweaks })
+        Ok(Self { inputs, txid_generator, edns, csubnet, protocol_tweaks })
     }
 }
 
@@ -425,6 +428,18 @@ impl UseEDNS {
     }
 }
 
+impl UseCSUBNET {
+    fn deduce(matches: &getopts::Matches) -> Result<Self, OptionsError> {
+        if let Some(csubnet) = matches.opt_str("csubnet") {
+            match csubnet.as_str().parse::<IpAddr>() {
+                Ok(addr) => Ok(Self { client_subnet : Some(addr) }),
+                Err(e) => Err(OptionsError::InvalidCSUBNET(e.to_string()))
+            }
+        } else {
+            Ok(Self { client_subnet: None })
+        }
+    }
+}
 
 impl ProtocolTweaks {
     fn deduce(matches: &getopts::Matches) -> Result<Self, OptionsError> {
@@ -502,6 +517,7 @@ pub enum HelpReason {
 pub enum OptionsError {
     InvalidDomain(String),
     InvalidEDNS(String),
+    InvalidCSUBNET(String),
     InvalidQueryType(String),
     InvalidQueryClass(String),
     InvalidTxid(String),
@@ -516,6 +532,7 @@ impl fmt::Display for OptionsError {
         match self {
             Self::InvalidDomain(domain)  => write!(f, "Invalid domain {:?}", domain),
             Self::InvalidEDNS(edns)      => write!(f, "Invalid EDNS setting {:?}", edns),
+            Self::InvalidCSUBNET(csubnet)=> write!(f, "Invalid CSUBNET address {:?}", csubnet),
             Self::InvalidQueryType(qt)   => write!(f, "Invalid query type {:?}", qt),
             Self::InvalidQueryClass(qc)  => write!(f, "Invalid query class {:?}", qc),
             Self::InvalidTxid(txid)      => write!(f, "Invalid transaction ID {:?}", txid),
@@ -799,6 +816,18 @@ mod test {
     }
 
     #[test]
+    fn csubnet_ipv4() {
+        let options = Options::getopts(&[ "dom.ain", "--csubnet=1.2.3.4" ]).unwrap();
+        assert_eq!(options.requests.csubnet.client_subnet, Some(IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4))));
+    }
+
+    #[test]
+    fn csubnet_ipv6() {
+        let options = Options::getopts(&[ "dom.ain", "--csubnet=2001:4f8:4:7:2e0:81ff:fe52:9a6b" ]).unwrap();
+        assert_eq!(options.requests.csubnet.client_subnet, Some(IpAddr::V6(Ipv6Addr::new(0x2001, 0x4f8, 0x4, 0x7, 0x2e0, 0x81ff, 0xfe52, 0x9a6b))));
+    }
+
+    #[test]
     fn two_more_tweaks() {
         let options = Options::getopts(&[ "dom.ain", "-Z", "aa", "-Z", "cd" ]).unwrap();
         assert_eq!(options.requests.protocol_tweaks.set_authoritative_flag, true);
@@ -883,6 +912,12 @@ mod test {
     fn invalid_edns() {
         assert_eq!(Options::getopts(&[ "--edns=yep" ]),
                    OptionsResult::InvalidOptions(OptionsError::InvalidEDNS("yep".into())));
+    }
+
+    #[test]
+    fn invalid_csubnet() {
+        assert_eq!(Options::getopts(&[ "--csubnet=yep" ]),
+                   OptionsResult::InvalidOptions(OptionsError::InvalidCSUBNET("invalid IP address syntax".into())));
     }
 
     #[test]
