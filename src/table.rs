@@ -108,7 +108,7 @@ impl Table {
         }
 
         if let Some(dur) = duration {
-            println!("Ran in {}ms", dur.as_millis());
+            println!("Ran in {:.2}ms", dur.as_secs_f64() * 1000.0);
         }
     }
 

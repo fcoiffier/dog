@@ -118,8 +118,7 @@ impl OutputFormat {
                     let object = object! {
                         "responses": rs,
                         "duration": {
-                            "secs": duration.as_secs(),
-                            "millis": duration.subsec_millis(),
+                            "secs": duration.as_secs_f64()
                         },
                     };
 
