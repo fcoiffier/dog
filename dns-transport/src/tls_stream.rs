@@ -1,9 +1,7 @@
-use super::tls_proxy::auto_stream;
-use super::to_socket_addr;
 use super::Error;
 use super::HttpsTransport;
 use super::TlsTransport;
-use std::net::{SocketAddr, TcpStream};
+use std::net::TcpStream;
 use std::time::Duration;
 
 #[cfg(any(feature = "with_nativetls", feature = "with_nativetls_vendored"))]
@@ -12,6 +10,9 @@ fn stream_nativetls(
     port: u16,
     timeout: Option<Duration>,
 ) -> Result<native_tls::TlsStream<TcpStream>, Error> {
+
+    use super::tls_proxy::auto_stream;
+
     let connector = native_tls::TlsConnector::new()?;
     let stream = auto_stream(domain, port, timeout)?;
 
@@ -24,9 +25,11 @@ fn stream_rustls(
     port: u16,
     timeout: Option<Duration>,
 ) -> Result<rustls::StreamOwned<rustls::ClientConnection, TcpStream>, Error> {
+
     use rustls::crypto::{aws_lc_rs as provider, CryptoProvider};
     use rustls_pki_types;
     use std::{convert::TryFrom, sync::Arc};
+    use super::to_socket_addr;
 
     let root_store = rustls::RootCertStore {
         roots: webpki_roots::TLS_SERVER_ROOTS.into(),

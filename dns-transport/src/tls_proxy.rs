@@ -149,13 +149,12 @@ fn insert_from_env(proxies: &mut SystemProxyMap, scheme: &str, var: &str) -> boo
 }
 
 /// make a http connect tunnel for tls stream
-#[cfg(any(feature = "with_rustls", feature = "with_nativetls", feature = "with_nativetls_vendored"))]
 fn tunnel(
     mut stream: TcpStream,
     host: String,
     port: u16,
     user_agent: Option<HeaderValue>,
-    auth: Option<HeaderValue>,
+    auth: &Option<HeaderValue>,
 ) -> Result<TcpStream, Error>
 {
 
@@ -227,19 +226,19 @@ pub fn auto_stream(domain: &str, port: u16, timeout: Option<Duration>) -> Result
     
     if let Some(proxy) = proxies.get("https") {
         match proxy {
-            ProxyScheme::Http { auth: _, host } => {
+            ProxyScheme::Http { auth, host } => {
                 // TODO Implement time-out
                 let mut stream = TcpStream::connect(host.as_str())?;
-                stream = tunnel(stream, domain.into(), port, None, None)?;
+                stream = tunnel(stream, domain.into(), port, None, auth)?;
                 return Ok(stream);
             }
             #[cfg(any(feature = "with_nativetls", feature = "with_nativetls_vendored"))]
-            ProxyScheme::Https { auth: _, host } => {
+            ProxyScheme::Https { auth, host } => {
                 // TODO Implement time-out
                 let connector = native_tls::TlsConnector::new()?;
                 let mut stream = TcpStream::connect(host.as_str())?;
                 connector.connect(domain, stream.try_clone()?)?;
-                stream = tunnel(stream, domain.into(), port, None, None)?;
+                stream = tunnel(stream, domain.into(), port, None, auth)?;
                 return Ok(stream);
             }
             #[cfg(feature = "with_rustls")]
