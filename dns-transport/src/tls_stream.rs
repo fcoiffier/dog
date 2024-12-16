@@ -1,12 +1,17 @@
-use std::net::TcpStream;
-use std::time::Duration;
+use super::tls_proxy::auto_stream;
+use super::to_socket_addr;
 use super::Error;
 use super::HttpsTransport;
 use super::TlsTransport;
-use super::tls_proxy::auto_stream;
+use std::net::{SocketAddr, TcpStream};
+use std::time::Duration;
 
 #[cfg(any(feature = "with_nativetls", feature = "with_nativetls_vendored"))]
-fn stream_nativetls(domain: &str, port: u16, timeout: Option<Duration>) -> Result<native_tls::TlsStream<TcpStream>, Error> {
+fn stream_nativetls(
+    domain: &str,
+    port: u16,
+    timeout: Option<Duration>,
+) -> Result<native_tls::TlsStream<TcpStream>, Error> {
     let connector = native_tls::TlsConnector::new()?;
     let stream = auto_stream(domain, port, timeout)?;
 
@@ -14,19 +19,40 @@ fn stream_nativetls(domain: &str, port: u16, timeout: Option<Duration>) -> Resul
 }
 
 #[cfg(feature = "with_rustls")]
-fn stream_rustls(domain: &str, port: u16, timeout: Option<Duration>) -> Result<rustls::StreamOwned<rustls::ClientSession,TcpStream>, Error> {
-    use std::sync::Arc;
+fn stream_rustls(
+    domain: &str,
+    port: u16,
+    timeout: Option<Duration>,
+) -> Result<rustls::StreamOwned<rustls::ClientConnection, TcpStream>, Error> {
+    use rustls::crypto::{aws_lc_rs as provider, CryptoProvider};
+    use rustls_pki_types;
+    use std::{convert::TryFrom, sync::Arc};
 
-    let mut config = rustls::ClientConfig::new();
+    let root_store = rustls::RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.into(),
+    };
 
-    config.root_store.add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+    let config = rustls::ClientConfig::builder_with_provider(
+        CryptoProvider {
+            cipher_suites: provider::DEFAULT_CIPHER_SUITES.to_vec(),
+            ..provider::default_provider()
+        }
+        .into(),
+    )
+    .with_protocol_versions(&rustls::DEFAULT_VERSIONS.to_vec())
+    .expect("inconsistent cipher-suite/versions selected")
+    .with_root_certificates(root_store)
+    .with_no_client_auth();
 
-    let dns_name = webpki::DNSNameRef::try_from_ascii_str(domain)?;
+    let dns_name = rustls_pki_types::ServerName::try_from(domain.to_string())?;
 
-    let conn = rustls::ClientSession::new(&Arc::new(config), dns_name);
+    let conn = rustls::ClientConnection::new(Arc::new(config), dns_name)?;
 
     let sock_addr = to_socket_addr(domain, port)?;
-    let sock = TcpStream::connect_timeout(&sock_addr, timeout)?;
+    let sock = match timeout {
+        None => TcpStream::connect(&sock_addr)?,
+        Some(t) => TcpStream::connect_timeout(&sock_addr, t)?,
+    };
     let tls = rustls::StreamOwned::new(conn, sock);
 
     Ok(tls)
@@ -70,4 +96,3 @@ cfg_if::cfg_if! {
         unreachable!("tls/https enabled but no tls implementation provided")
     }
 }
-

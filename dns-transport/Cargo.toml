@@ -24,7 +24,7 @@ native-tls = { version = "0.2", optional = true }
 httparse = { version = "1.3", optional = true }
 
 # DoH through reqwest
-reqwest = { version = "0.12.9", optional = true, features = ["blocking"] }
+reqwest = { version = "0.12.9", optional = true, default-features = false, features = ["blocking"] }
 
 # For http/https proxies
 http = "1.0"
@@ -32,7 +32,7 @@ url = "2.2"
 
 rustls = { version = "0.23", optional = true }
 
-webpki = { version = "0.22", optional = true }
+rustls-pki-types = { version = "1.10", optional = true }
 
 webpki-roots = { version = "0.26", optional = true }
 
@@ -42,8 +42,8 @@ cfg-if = "1"
 default = []  # these are enabled in the main dog crate
 
 with_tls   = []
-with_https = ["httparse", "reqwest"]
+with_https = ["dep:httparse", "dep:reqwest"]
 
-with_nativetls = ["native-tls", "reqwest/native-tls"]
-with_nativetls_vendored = ["native-tls", "native-tls/vendored", "reqwest/native-tls-vendored"]
-with_rustls = ["rustls", "webpki-roots", "webpki", "reqwest/rustls-tls"]
+with_nativetls = ["dep:native-tls", "reqwest?/native-tls"]
+with_nativetls_vendored = ["dep:native-tls", "native-tls?/vendored", "reqwest?/native-tls-vendored"]
+with_rustls = ["dep:rustls", "dep:rustls-pki-types", "dep:webpki-roots", "reqwest?/rustls-tls-webpki-roots"]

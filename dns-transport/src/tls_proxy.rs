@@ -149,8 +149,8 @@ fn insert_from_env(proxies: &mut SystemProxyMap, scheme: &str, var: &str) -> boo
 }
 
 /// make a http connect tunnel for tls stream
-#[cfg(any(feature = "with_nativetls", feature = "with_nativetls_vendored"))]
-pub fn tunnel(
+#[cfg(any(feature = "with_rustls", feature = "with_nativetls", feature = "with_nativetls_vendored"))]
+fn tunnel(
     mut stream: TcpStream,
     host: String,
     port: u16,

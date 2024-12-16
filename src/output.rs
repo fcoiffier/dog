@@ -653,6 +653,8 @@ fn erroneous_phase(error: &TransportError) -> &'static str {
         TransportError::TlsHandshakeError(_)  => "tls",
         #[cfg(feature = "with_rustls")]
         TransportError::RustlsInvalidDnsNameError(_) => "tls", // TODO: Actually wrong, could be https
+        #[cfg(feature = "with_rustls")]
+        TransportError::RustlsConnectionError(_) => "tls",
         #[cfg(feature = "with_https")]
         TransportError::HttpError(_)          |
         TransportError::ReqwestError(_)          |
@@ -674,6 +676,8 @@ fn error_message(error: TransportError) -> String {
         TransportError::TlsHandshakeError(e)  => e.to_string(),
         #[cfg(any(feature = "with_rustls"))]
         TransportError::RustlsInvalidDnsNameError(e) => e.to_string(),
+        #[cfg(any(feature = "with_rustls"))]
+        TransportError::RustlsConnectionError(e) => e.to_string(),
         TransportError::ProxyError(e) => e.to_string(),
         #[cfg(feature = "with_https")]
         TransportError::HttpError(e)          => e.to_string(),

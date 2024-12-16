@@ -1,15 +1,11 @@
 #![cfg_attr(not(feature = "with_https"), allow(unused))]
 
-// use std::io::Read; //, Write};
-// use std::net::TcpStream;
 use std::time::Duration;
 
 use log::*;
 
-use dns::{Request, Response}; //, WireError};
+use dns::{Request, Response};
 use super::{Transport, Error};
-
-use super::tls_stream;
 
 /// The **HTTPS transport**, which sends DNS wire data inside HTTP packets
 /// encrypted with TLS, using TCP.
@@ -24,17 +20,6 @@ impl HttpsTransport {
         Self { url }
     }
 }
-
-// fn find_subsequence(haystack: &[u8], needle: &[u8]) -> Option<usize> {
-//     haystack.windows(needle.len()).position(|window| window == needle)
-// }
-
-// fn contains_header(buf: &[u8]) -> bool {
-//     let header_end: [u8; 4] = [ 13, 10, 13, 10 ];
-//     find_subsequence(buf, &header_end).is_some()
-// }
-
-// use tls_stream::TlsStream;
 
 impl Transport for HttpsTransport {
 
@@ -77,18 +62,6 @@ impl Transport for HttpsTransport {
         unreachable!("HTTPS feature disabled")
     }
 }
-
-// impl HttpsTransport {
-//     fn split_domain(&self) -> Option<(&str, &str)> {
-//         if let Some(sp) = self.url.strip_prefix("https://") {
-//             if let Some(colon_index) = sp.find('/') {
-//                 return Some((&sp[.. colon_index], &sp[colon_index ..]));
-//             }
-//         }
-
-//         None
-//     }
-// }
 
 /// The User-Agent header sent with HTTPS requests.
 static USER_AGENT: &str = concat!("dog/", env!("CARGO_PKG_VERSION"));
