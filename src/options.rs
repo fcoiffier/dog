@@ -550,6 +550,7 @@ mod test {
     use super::*;
     use pretty_assertions::assert_eq;
     use dns::record::UnknownQtype;
+    use std::net::{Ipv4Addr, Ipv6Addr};
 
     impl Inputs {
         fn fallbacks() -> Self {
